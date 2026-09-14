@@ -1,13 +1,58 @@
+import os
+
+from dotenv import load_dotenv
+from openai import OpenAI
+
+
+load_dotenv()
+
+client = OpenAI(
+    api_key=os.getenv("OPENAI_API_KEY")
+)
+
+
 def route_message(message: str) -> str:
-    text = message.lower()
+    response = client.responses.create(
+        model="gpt-5.6",
+        instructions="""
+You are the supervisor of an e-commerce customer support system.
 
-    if any(word in text for word in ["sipariş", "kargo", "teslimat"]):
-        return "order"
+Classify the customer's message into exactly one category:
 
-    if any(word in text for word in ["iade", "değişim", "para iadesi"]):
-        return "refund"
+order
+product
+refund
+general
 
-    if any(word in text for word in ["ürün", "stok", "fiyat", "özellik"]):
-        return "product"
+Definitions:
 
-    return "general"
+order:
+Questions about order status, shipping, delivery or tracking.
+
+product:
+Questions about products, stock, price, color or product information.
+
+refund:
+Questions about returns, exchanges or refunds.
+
+general:
+Anything that does not fit the categories above.
+
+Return ONLY the category name.
+""",
+        input=message
+    )
+
+    intent = response.output_text.strip().lower()
+
+    allowed_intents = {
+        "order",
+        "product",
+        "refund",
+        "general"
+    }
+
+    if intent not in allowed_intents:
+        return "general"
+
+    return intent
