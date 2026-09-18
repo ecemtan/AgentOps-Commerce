@@ -7,6 +7,10 @@ from app.security.tool_authorizer import (
     execute_authorized_tool
 )
 
+from app.agents.base import (
+    create_agent_result
+)
+
 
 def handle_order(message: str) -> dict:
 
@@ -15,8 +19,21 @@ def handle_order(message: str) -> dict:
         message.upper()
     )
 
+    # Sipariş ID yoksa policy / FAQ bilgisi için RAG.
     if not match:
-        return generate_rag_response(message)
+
+        rag_result = generate_rag_response(
+            message
+        )
+
+        return create_agent_result(
+            answer=rag_result["answer"],
+            sources=rag_result["sources"],
+            response_type="rag",
+            metadata={
+                "rag": rag_result.get("rag", {})
+            }
+        )
 
     order_id = match.group()
 
@@ -28,34 +45,54 @@ def handle_order(message: str) -> dict:
     )
 
     if not tool_result["success"]:
-        return {
-            "answer": "Sipariş bilgisi alınamadı.",
-            "sources": []
-        }
+
+        return create_agent_result(
+            answer="Sipariş bilgisi alınamadı.",
+            response_type="tool_error",
+            metadata={
+                "order_id": order_id
+            }
+        )
 
     order = tool_result["data"]
 
     if not order:
-        return {
-            "answer": f"{order_id} numaralı sipariş bulunamadı.",
-            "sources": ["mock_db"]
-        }
+
+        return create_agent_result(
+            answer=(
+                f"{order_id} numaralı "
+                "sipariş bulunamadı."
+            ),
+            sources=["mock_db"],
+            response_type="not_found",
+            metadata={
+                "order_id": order_id
+            }
+        )
 
     if order["tracking_number"]:
+
         answer = (
             f"{order_id} numaralı siparişinizin durumu: "
             f"{order['status']}. "
             f"Kargo firması: {order['carrier']}. "
-            f"Takip numarası: {order['tracking_number']}."
+            f"Takip numarası: "
+            f"{order['tracking_number']}."
         )
 
     else:
+
         answer = (
             f"{order_id} numaralı siparişinizin durumu: "
             f"{order['status']}."
         )
 
-    return {
-        "answer": answer,
-        "sources": ["mock_db"]
-    }
+    return create_agent_result(
+        answer=answer,
+        sources=["mock_db"],
+        response_type="tool",
+        metadata={
+            "order_id": order_id,
+            "tool": "get_order_status"
+        }
+    )

@@ -7,6 +7,10 @@ from app.security.tool_authorizer import (
     execute_authorized_tool
 )
 
+from app.agents.base import (
+    create_agent_result
+)
+
 
 def handle_product(message: str) -> dict:
 
@@ -15,8 +19,21 @@ def handle_product(message: str) -> dict:
         message.upper()
     )
 
+    # SKU yoksa ürün knowledge base'i için RAG.
     if not match:
-        return generate_rag_response(message)
+
+        rag_result = generate_rag_response(
+            message
+        )
+
+        return create_agent_result(
+            answer=rag_result["answer"],
+            sources=rag_result["sources"],
+            response_type="rag",
+            metadata={
+                "rag": rag_result.get("rag", {})
+            }
+        )
 
     product_id = match.group()
 
@@ -28,24 +45,38 @@ def handle_product(message: str) -> dict:
     )
 
     if not tool_result["success"]:
-        return {
-            "answer": "Ürün bilgisi alınamadı.",
-            "sources": []
-        }
+
+        return create_agent_result(
+            answer="Ürün bilgisi alınamadı.",
+            response_type="tool_error",
+            metadata={
+                "product_id": product_id
+            }
+        )
 
     product = tool_result["data"]
 
     if not product:
-        return {
-            "answer": f"{product_id} kodlu ürün bulunamadı.",
-            "sources": ["mock_db"]
-        }
+
+        return create_agent_result(
+            answer=(
+                f"{product_id} kodlu ürün bulunamadı."
+            ),
+            sources=["mock_db"],
+            response_type="not_found",
+            metadata={
+                "product_id": product_id
+            }
+        )
 
     if product["stock"] > 0:
+
         stock_status = (
             f"Stokta {product['stock']} adet var."
         )
+
     else:
+
         stock_status = (
             "Ürün şu anda stokta yok."
         )
@@ -57,7 +88,12 @@ def handle_product(message: str) -> dict:
         f"Renk: {product['color']}."
     )
 
-    return {
-        "answer": answer,
-        "sources": ["mock_db"]
-    }
+    return create_agent_result(
+        answer=answer,
+        sources=["mock_db"],
+        response_type="tool",
+        metadata={
+            "product_id": product_id,
+            "tool": "get_product"
+        }
+    )

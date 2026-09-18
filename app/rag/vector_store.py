@@ -7,12 +7,17 @@ from app.rag.embeddings import create_embeddings
 
 KNOWLEDGE_DIR = Path("app/knowledge")
 
+DEFAULT_TOP_K = 4
+DEFAULT_THRESHOLD = 0.35
+
 
 def load_documents() -> list[dict]:
     documents = []
 
     for file_path in KNOWLEDGE_DIR.glob("*.txt"):
-        content = file_path.read_text(encoding="utf-8")
+        content = file_path.read_text(
+            encoding="utf-8"
+        )
 
         chunks = [
             chunk.strip()
@@ -20,11 +25,12 @@ def load_documents() -> list[dict]:
             if chunk.strip()
         ]
 
-        for chunk in chunks:
+        for chunk_id, chunk in enumerate(chunks):
             documents.append(
                 {
                     "text": chunk,
-                    "source": file_path.name
+                    "source": file_path.name,
+                    "chunk_id": chunk_id
                 }
             )
 
@@ -33,9 +39,10 @@ def load_documents() -> list[dict]:
 
 documents = load_documents()
 
-
 if not documents:
-    raise RuntimeError("Knowledge base içerisinde doküman bulunamadı.")
+    raise RuntimeError(
+        "Knowledge base içerisinde doküman bulunamadı."
+    )
 
 
 document_texts = [
@@ -43,8 +50,9 @@ document_texts = [
     for document in documents
 ]
 
-
-document_embeddings = create_embeddings(document_texts)
+document_embeddings = create_embeddings(
+    document_texts
+)
 
 dimension = document_embeddings.shape[1]
 
@@ -55,11 +63,13 @@ index.add(document_embeddings)
 
 def search_knowledge(
     query: str,
-    top_k: int = 3,
-    threshold: float = 0.45
+    top_k: int = DEFAULT_TOP_K,
+    threshold: float = DEFAULT_THRESHOLD
 ) -> list[dict]:
 
-    query_embedding = create_embeddings([query])
+    query_embedding = create_embeddings(
+        [query]
+    )
 
     scores, indices = index.search(
         query_embedding,
@@ -68,12 +78,16 @@ def search_knowledge(
 
     results = []
 
-    for score, index_id in zip(scores[0], indices[0]):
-
+    for score, index_id in zip(
+        scores[0],
+        indices[0]
+    ):
         if index_id == -1:
             continue
 
-        if float(score) < threshold:
+        score = float(score)
+
+        if score < threshold:
             continue
 
         document = documents[index_id]
@@ -82,7 +96,8 @@ def search_knowledge(
             {
                 "text": document["text"],
                 "source": document["source"],
-                "score": float(score)
+                "chunk_id": document["chunk_id"],
+                "score": round(score, 4)
             }
         )
 

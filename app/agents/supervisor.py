@@ -1,18 +1,25 @@
 import ollama
 
 
-ALLOWED_INTENTS = {"order", "product", "refund", "general"}
+MODEL_NAME = "qwen2.5:1.5b"
+
+ALLOWED_INTENTS = {
+    "order",
+    "product",
+    "refund",
+    "general"
+}
 
 
 def route_message(message: str) -> str:
 
-    # -------------------------------------------------
-    # 1. HYBRID ROUTING
-    # Kesin durumlarda LLM'i boşuna çalıştırmıyoruz.
-    # -------------------------------------------------
-
     message_lower = message.lower()
     message_upper = message.upper()
+
+    # -------------------------------------------------
+    # 1. DETERMINISTIC / HYBRID ROUTING
+    # Kesin durumlarda LLM çalıştırılmaz.
+    # -------------------------------------------------
 
     # ORD numarası varsa sipariş veya iade işlemi.
     if "ORD-" in message_upper:
@@ -22,10 +29,16 @@ def route_message(message: str) -> str:
             "geri gönder",
             "geri gonder",
             "paramı geri",
-            "parami geri"
+            "parami geri",
+            "para iadesi",
+            "değişim",
+            "degisim"
         ]
 
-        if any(word in message_lower for word in refund_words):
+        if any(
+            word in message_lower
+            for word in refund_words
+        ):
             return "refund"
 
         return "order"
@@ -36,12 +49,12 @@ def route_message(message: str) -> str:
 
     # -------------------------------------------------
     # 2. LLM ROUTING
-    # Mesaj açık bir ID içermiyorsa Qwen niyeti belirler.
+    # Açık ID yoksa Qwen kullanıcının niyetini belirler.
     # -------------------------------------------------
 
     system_prompt = """
-Sen bir e-ticaret müşteri destek sisteminde intent classification yapan
-Supervisor Agent'sın.
+Sen bir e-ticaret müşteri destek sisteminde
+intent classification yapan Supervisor Agent'sın.
 
 Görevin kullanıcının ASIL NİYETİNİ belirlemektir.
 
@@ -66,6 +79,8 @@ refund
 - Para iadesi
 - Ürün değişimi
 - Satın alınan ürünü geri göndermek
+- İade politikası
+- İade süresi
 
 general
 - Selamlaşma
@@ -73,7 +88,7 @@ general
 - Yukarıdaki kategorilere girmeyen konular
 
 
-ÖNEMLİ ÖRNEKLER:
+ÖRNEKLER:
 
 Mesaj: "Siparişim nerede?"
 Cevap: order
@@ -96,6 +111,9 @@ Cevap: product
 Mesaj: "C vitamini serumunu nasıl kullanmalıyım?"
 Cevap: product
 
+Mesaj: "Bu ürünün fiyatı ne kadar?"
+Cevap: product
+
 Mesaj: "SKU-1001 kaç TL?"
 Cevap: product
 
@@ -108,7 +126,10 @@ Cevap: refund
 Mesaj: "İade süresi kaç gün?"
 Cevap: refund
 
-Mesaj: "Merhaba, nasılsınız?"
+Mesaj: "Merhaba"
+Cevap: general
+
+Mesaj: "Teşekkür ederim"
 Cevap: general
 
 Mesaj: "Python'da decorator nedir?"
@@ -124,13 +145,14 @@ product
 refund
 general
 
+Başka hiçbir şey yazma.
 Açıklama yapma.
 Cümle kurma.
-Noktalama işareti kullanma.
+Birden fazla kategori yazma.
 """
 
     response = ollama.chat(
-        model="qwen2.5:1.5b",
+        model=MODEL_NAME,
         messages=[
             {
                 "role": "system",
@@ -146,13 +168,27 @@ Noktalama işareti kullanma.
         }
     )
 
-    intent = response["message"]["content"].strip().lower()
+    intent = (
+        response["message"]["content"]
+        .strip()
+        .lower()
+    )
 
-    # Küçük modeller bazen "order." veya
-    # "Cevap: order" gibi çıktı verebilir.
-    for allowed_intent in ALLOWED_INTENTS:
-        if allowed_intent in intent:
-            return allowed_intent
+    # -------------------------------------------------
+    # 3. STRICT INTENT VALIDATION
+    # -------------------------------------------------
 
-    # Tanınmayan cevaplarda güvenli fallback.
+    normalized_intent = (
+        intent
+        .replace("cevap:", "")
+        .replace(".", "")
+        .replace(":", "")
+        .strip()
+    )
+
+    if normalized_intent in ALLOWED_INTENTS:
+        return normalized_intent
+
+    # LLM beklenmeyen bir çıktı üretirse
+    # güvenli fallback.
     return "general"

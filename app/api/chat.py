@@ -24,6 +24,10 @@ from app.observability.logger import (
     log_request
 )
 
+from app.escalation.escalation_service import (
+    evaluate_escalation
+)
+
 
 router = APIRouter()
 
@@ -32,16 +36,13 @@ router = APIRouter()
 def chat(request: ChatRequest):
 
     start_time = time.perf_counter()
-
     request_id = str(uuid4())
 
     # -----------------------------------------
     # 1. SECURITY
     # -----------------------------------------
 
-    security = analyze_request(
-        request.message
-    )
+    security = analyze_request(request.message)
 
     if not security["allowed"]:
 
@@ -69,21 +70,19 @@ def chat(request: ChatRequest):
                 "nedeniyle işlenemedi."
             ),
             "sources": [],
+
             "security": {
-                "risk_score": security[
-                    "risk_score"
-                ],
-                "risk_level": security[
-                    "risk_level"
-                ],
-                "flags": security[
-                    "security_flags"
-                ]
+                "risk_score": security["risk_score"],
+                "risk_level": security["risk_level"],
+                "flags": security["security_flags"]
             },
-            "latency_ms": round(
-                latency_ms,
-                2
-            )
+
+            "human_escalation": {
+                "required": True,
+                "reasons": ["security_risk"]
+            },
+
+            "latency_ms": round(latency_ms, 2)
         }
 
     safe_message = security["message"]
@@ -92,11 +91,9 @@ def chat(request: ChatRequest):
     # 2. MEMORY
     # -----------------------------------------
 
-    enriched_message = (
-        enrich_message_with_memory(
-            request.session_id,
-            safe_message
-        )
+    enriched_message = enrich_message_with_memory(
+        request.session_id,
+        safe_message
     )
 
     # -----------------------------------------
@@ -112,31 +109,41 @@ def chat(request: ChatRequest):
     # -----------------------------------------
 
     if selected_agent == "order":
-
         result = handle_order(
             enriched_message
         )
 
     elif selected_agent == "refund":
-
         result = handle_refund(
             enriched_message
         )
 
     elif selected_agent == "product":
-
         result = handle_product(
             enriched_message
         )
 
     else:
-
         result = handle_general(
             enriched_message
         )
 
     # -----------------------------------------
-    # 5. MEMORY UPDATE
+    # 5. HUMAN ESCALATION
+    # -----------------------------------------
+
+    escalation = evaluate_escalation(
+    answer=result["answer"],
+    selected_agent=selected_agent,
+    sources=result["sources"],
+    security=security,
+    response_type=result.get(
+        "response_type",
+        "unknown"
+    )
+)
+    # -----------------------------------------
+    # 6. MEMORY UPDATE
     # -----------------------------------------
 
     update_session(
@@ -146,7 +153,7 @@ def chat(request: ChatRequest):
     )
 
     # -----------------------------------------
-    # 6. OBSERVABILITY
+    # 7. OBSERVABILITY
     # -----------------------------------------
 
     latency_ms = (
@@ -163,7 +170,7 @@ def chat(request: ChatRequest):
     )
 
     # -----------------------------------------
-    # 7. RESPONSE
+    # 8. RESPONSE
     # -----------------------------------------
 
     return {
@@ -171,29 +178,25 @@ def chat(request: ChatRequest):
         "session_id": request.session_id,
         "message": request.message,
         "selected_agent": selected_agent,
-        "response": result["answer"],
-        "sources": result["sources"],
-
-        "security": {
-            "risk_score": security[
-                "risk_score"
-            ],
-            "risk_level": security[
-                "risk_level"
-            ],
-            "flags": security[
-                "security_flags"
-            ],
-            "pii_detected": security[
-                "pii_detected"
-            ],
-            "pii_types": security[
-                "pii_types"
-            ]
+  "response": result["answer"],
+"sources": result["sources"],
+"response_type": result.get(
+    "response_type",
+    "unknown"
+),
+"metadata": result.get(
+    "metadata",
+    {}
+),
+"security": {
+            "risk_score": security["risk_score"],
+            "risk_level": security["risk_level"],
+            "flags": security["security_flags"],
+            "pii_detected": security["pii_detected"],
+            "pii_types": security["pii_types"]
         },
 
-        "latency_ms": round(
-            latency_ms,
-            2
-        )
+        "human_escalation": escalation,
+
+        "latency_ms": round(latency_ms, 2)
     }

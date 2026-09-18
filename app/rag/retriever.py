@@ -1,9 +1,12 @@
 from app.rag.vector_store import search_knowledge
 
 
+MAX_CONTEXT_CHUNKS = 2
+
+
 def retrieve_context(
     query: str,
-    top_k: int = 2
+    top_k: int = 4
 ) -> dict:
 
     results = search_knowledge(
@@ -14,14 +17,21 @@ def retrieve_context(
     if not results:
         return {
             "context": "",
-            "sources": []
+            "sources": [],
+            "matches": [],
+            "best_score": 0.0
         }
 
-    context_parts = []
+    # En yüksek similarity score'a sahip
+    # sınırlı sayıda chunk'ı context'e al.
+    selected_results = results[
+        :MAX_CONTEXT_CHUNKS
+    ]
 
+    context_parts = []
     sources = []
 
-    for result in results:
+    for result in selected_results:
 
         context_parts.append(
             result["text"]
@@ -38,5 +48,7 @@ def retrieve_context(
 
     return {
         "context": context,
-        "sources": sources
+        "sources": sources,
+        "matches": selected_results,
+        "best_score": results[0]["score"]
     }
