@@ -62,7 +62,7 @@ def handle_product(message: str) -> dict:
             answer=(
                 f"{product_id} kodlu ürün bulunamadı."
             ),
-            sources=["mock_db"],
+            sources=["sqlite"],
             response_type="not_found",
             metadata={
                 "product_id": product_id
@@ -90,7 +90,7 @@ def handle_product(message: str) -> dict:
 
     return create_agent_result(
         answer=answer,
-        sources=["mock_db"],
+        sources=["sqlite"],
         response_type="tool",
         metadata={
             "product_id": product_id,

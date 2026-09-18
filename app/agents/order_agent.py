@@ -63,7 +63,7 @@ def handle_order(message: str) -> dict:
                 f"{order_id} numaralı "
                 "sipariş bulunamadı."
             ),
-            sources=["mock_db"],
+sources=["sqlite"],
             response_type="not_found",
             metadata={
                 "order_id": order_id
@@ -89,8 +89,7 @@ def handle_order(message: str) -> dict:
 
     return create_agent_result(
         answer=answer,
-        sources=["mock_db"],
-        response_type="tool",
+sources=["sqlite"],        response_type="tool",
         metadata={
             "order_id": order_id,
             "tool": "get_order_status"
