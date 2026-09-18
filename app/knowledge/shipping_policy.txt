@@ -1,0 +1,13 @@
+SHIPPING POLICY
+
+Siparişler ödeme onayından sonra hazırlanır.
+
+Hazırlanan siparişler genellikle 1-2 iş günü içerisinde kargoya teslim edilir.
+
+Kargoya verilen siparişler genellikle 2-4 iş günü içerisinde müşteriye ulaştırılır.
+
+Kargo takip numarası sipariş kargoya verildikten sonra oluşturulur.
+
+Kargo takip bilgileri müşteriye sistem üzerinden iletilir.
+
+Resmi tatiller, yoğun kampanya dönemleri ve kargo firmasından kaynaklanan gecikmeler teslimat süresini etkileyebilir.

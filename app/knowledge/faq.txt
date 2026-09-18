@@ -1,0 +1,16 @@
+FAQ
+
+QUESTION: Siparişimi nasıl takip edebilirim?
+ANSWER: Sipariş numaranızı paylaşarak sipariş ve kargo durumunuzu sorgulayabilirsiniz.
+
+QUESTION: Kargo takip numaramı nereden öğrenebilirim?
+ANSWER: Sipariş kargoya verildikten sonra kargo takip numarası oluşturulur.
+
+QUESTION: Stokta olmayan ürün tekrar gelir mi?
+ANSWER: Stok bilgileri değişebilir. Güncel stok durumu ürün bilgileri üzerinden kontrol edilmelidir.
+
+QUESTION: Ürünümü iade etmek istiyorum. Ne yapmalıyım?
+ANSWER: İade işleminin kontrol edilebilmesi için sipariş numaranızı paylaşmanız gerekir.
+
+QUESTION: Ürün hakkında nasıl bilgi alabilirim?
+ANSWER: Ürün adı veya SKU kodunu belirterek fiyat, stok ve mevcut ürün bilgilerini sorabilirsiniz.

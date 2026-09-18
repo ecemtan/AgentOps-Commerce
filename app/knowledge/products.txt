@@ -1,0 +1,15 @@
+PRODUCT: C Vitamin Serum
+SKU: SKU-1002
+Price: 399.90 TL
+Stock: 0
+Description: C vitamini içeren aydınlatıcı yüz serumudur.
+Usage: Temiz cilde sabah veya akşam 2-3 damla uygulanır.
+Warnings: Göz çevresiyle doğrudan temas ettirmeyiniz.
+
+PRODUCT: Hydrating Face Serum
+SKU: SKU-1001
+Price: 349.90 TL
+Stock: 12
+Description: Cildin nem seviyesini destekleyen nemlendirici yüz serumudur.
+Usage: Temiz cilde sabah ve akşam 2-3 damla uygulanır.
+Warnings: Harici kullanım içindir.
